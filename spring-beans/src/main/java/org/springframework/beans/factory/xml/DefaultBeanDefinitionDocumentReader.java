@@ -23,6 +23,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -57,6 +59,8 @@ import org.springframework.util.StringUtils;
  * @since 18.12.2003
  */
 public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocumentReader {
+
+	private static final Logger log = LoggerFactory.getLogger(DefaultBeanDefinitionDocumentReader.class);
 
 	public static final String BEAN_ELEMENT = BeanDefinitionParserDelegate.BEAN_ELEMENT;
 
@@ -125,6 +129,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// the new (child) delegate with a reference to the parent for fallback purposes,
 		// then ultimately reset this.delegate back to its original (parent) reference.
 		// this behavior emulates a stack of delegates without actually necessitating one.
+		log.info("{} {} 这里为什么要定义一个 parent? 看到后面就知道了，是递归问题，\n因为 <beans /> 内部是可以定义 <beans /> 的，所以这个方法的 root 其实不一定就是 xml 的根节点，也可以是嵌套在里面的 <beans /> 节点，从源码分析的角度，我们当做根节点就好了", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
@@ -186,17 +191,57 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	}
 
 	private void parseDefaultElement(Element ele, BeanDefinitionParserDelegate delegate) {
+		String string = """
+			parseDefaultElement(ele, delegate) 代表解析的节点是 <import />、<alias />、<bean />、<beans /> 这几个。
+
+    		这里的四个标签之所以是 default 的，是因为它们是处于这个 namespace 下定义的：
+    			http://www.springframework.org/schema/beans
+
+    		又到初学者科普时间，不熟悉 namespace 的读者请看下面贴出来的 xml，这里的第二行 xmlns 就是咯。
+    			<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           			xmlns="http://www.springframework.org/schema/beans"
+           			xsi:schemaLocation="http://www.springframework.org/schema/beans
+              							http://www.springframework.org/schema/beans/spring-beans.xsd"
+           			default-autowire="byName">
+
+           	而对于其他的标签，将进入到 delegate.parseCustomElement(element) 这个分支。如我们经常会使用到的 <mvc />、<task />、<context />、<aop />等。
+
+			这些属于扩展，如果需要使用上面这些 ”非 default“ 标签，那么上面的 xml 头部的地方也要引入相应的 namespace 和 .xsd 文件的路径。
+			如下所示，同时代码中需要提供相应的 parser 来解析，如 MvcNamespaceHandler、TaskNamespaceHandler、ContextNamespaceHandler、AopNamespaceHandler 等。
+
+			假如读者想分析 <context:property-placeholder location="classpath:xx.properties" /> 的实现原理，就应该到 ContextNamespaceHandler 中找答案。
+
+    			<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          			xmlns="http://www.springframework.org/schema/beans"
+          			xmlns:context="http://www.springframework.org/schema/context"
+          			xmlns:mvc="http://www.springframework.org/schema/mvc"
+          			xsi:schemaLocation="
+               			http://www.springframework.org/schema/beans
+               			http://www.springframework.org/schema/beans/spring-beans.xsd
+               			http://www.springframework.org/schema/context
+               			http://www.springframework.org/schema/context/spring-context.xsd
+               			http://www.springframework.org/schema/mvc
+               			http://www.springframework.org/schema/mvc/spring-mvc.xsd"
+          			default-autowire="byName">
+
+    		同理，以后你要是碰到 <dubbo /> 这种标签，那么就应该搜一搜是不是有 DubboNamespaceHandler 这个处理类。
+				""";
+		log.info("{} {} 解析 default namespace 下面的几个元素\n{}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), string);
 		if (delegate.nodeNameEquals(ele, IMPORT_ELEMENT)) {
+			log.info("{} 处理 <import /> 标签", Thread.currentThread().getStackTrace()[1].getMethodName());
 			importBeanDefinitionResource(ele);
 		}
 		else if (delegate.nodeNameEquals(ele, ALIAS_ELEMENT)) {
+			log.info("{} 处理 <alias /> 标签定义 <alias name=\"fromName\" alias=\"toName\"/>", Thread.currentThread().getStackTrace()[1].getMethodName());
 			processAliasRegistration(ele);
 		}
 		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
+			log.info("{} 处理 <bean /> 标签定义，重点", Thread.currentThread().getStackTrace()[1].getMethodName());
 			processBeanDefinition(ele, delegate);
 		}
 		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
 			// recurse
+			log.info("{} 如果碰到的是嵌套的 <beans /> 标签，需要递归", Thread.currentThread().getStackTrace()[1].getMethodName());
 			doRegisterBeanDefinitions(ele);
 		}
 	}
@@ -302,11 +347,14 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * and registering it with the registry.
 	 */
 	protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
+		log.info("{} {} [Focus] 将 <bean /> 节点中的信息提取出来，然后封装到一个 BeanDefinitionHolder 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		if (bdHolder != null) {
+			log.info("{} {} 如果有自定义属性的话，进行相应的解析", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
 				// Register the final decorated instance.
+				log.info("{} {} [Focus] 注册最终解析的实例", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
 			}
 			catch (BeanDefinitionStoreException ex) {
@@ -314,6 +362,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 						bdHolder.getBeanName() + "'", ele, ex);
 			}
 			// Send registration event.
+			log.info("{} {} 发送注册事件", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
 		}
 	}

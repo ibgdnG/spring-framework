@@ -44,6 +44,8 @@ import java.util.stream.Stream;
 
 import jakarta.inject.Provider;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.BeanCreationException;
@@ -119,6 +121,8 @@ import org.springframework.util.StringUtils;
 @SuppressWarnings("serial")
 public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFactory
 		implements ConfigurableListableBeanFactory, BeanDefinitionRegistry, Serializable {
+
+	private static final Logger log = LoggerFactory.getLogger(DefaultListableBeanFactory.class);
 
 	@Nullable
 	private static Class<?> javaxInjectProviderClass;
@@ -973,6 +977,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
 		if (existingDefinition != null) {
 			if (!isAllowBeanDefinitionOverriding()) {
+				log.info("{} {} 处理重复名称的 Bean 定义的情况，如果不允许覆盖的话，抛异常", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
 			else if (existingDefinition.getRole() < beanDefinition.getRole()) {
@@ -1000,6 +1005,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
+			log.info("{} {} 判断是否已经有其他的 Bean 开始初始化了\n注意，\"注册Bean\" 这个动作结束，Bean 依然还没有初始化，\n在 Spring 容器启动的最后，会 预初始化 所有的 singleton beans。", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
 				synchronized (this.beanDefinitionMap) {
@@ -1013,8 +1019,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 			else {
 				// Still in startup registration phase
+				log.info("{} {} 最正常的应该是进到这个分支。将 BeanDefinition 放到这个 map 中，这个 map 保存了所有的 BeanDefinition。", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				this.beanDefinitionMap.put(beanName, beanDefinition);
+				log.info("{} {} 这是个 ArrayList，所以会按照 bean 配置的顺序保存每一个注册的 Bean 的名字", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				this.beanDefinitionNames.add(beanName);
+				log.info("{} {} registerSingleton(String beanName, Object singletonObject)\n这不是重点，解释只是为了不让大家疑惑。Spring 会在后面\"手动\"注册一些 Bean，\n如 \"environment\"、\"systemProperties\" 等 bean，我们自己也可以在运行时注册 Bean 到容器中的", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				removeManualSingletonName(beanName);
 			}
 			this.frozenBeanDefinitionNames = null;

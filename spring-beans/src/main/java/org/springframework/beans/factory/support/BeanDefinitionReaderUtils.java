@@ -16,6 +16,8 @@
 
 package org.springframework.beans.factory.support;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -36,6 +38,8 @@ import org.springframework.util.StringUtils;
  * @see org.springframework.beans.factory.xml.DefaultBeanDefinitionDocumentReader
  */
 public abstract class BeanDefinitionReaderUtils {
+
+	private static final Logger log = LoggerFactory.getLogger(BeanDefinitionReaderUtils.class);
 
 	/**
 	 * Separator for generated bean names. If a class name or parent name is not
@@ -161,12 +165,14 @@ public abstract class BeanDefinitionReaderUtils {
 
 		// Register bean definition under primary name.
 		String beanName = definitionHolder.getBeanName();
+		log.info("{} {} [Focus] 注册 bean", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		registry.registerBeanDefinition(beanName, definitionHolder.getBeanDefinition());
 
 		// Register aliases for bean name, if any.
 		String[] aliases = definitionHolder.getAliases();
 		if (aliases != null) {
 			for (String alias : aliases) {
+				log.info("{} {} 如果还有别名的话，也要根据别名全部注册一遍，不然根据别名就会找不到 Bean,\nalias -> beanName 保存它们的别名信息，这个很简单，用一个 map 保存一下就可以\n获取的时候，会先将 alias 转换为 beanName，然后再查找", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				registry.registerAlias(beanName, alias);
 			}
 		}

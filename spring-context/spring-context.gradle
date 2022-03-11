@@ -41,4 +41,5 @@ dependencies {
 	testFixturesImplementation(testFixtures(project(":spring-beans")))
 	testFixturesImplementation("com.google.code.findbugs:jsr305")
 	testFixturesImplementation("org.assertj:assertj-core")
+	implementation("org.slf4j:slf4j-api:1.7.35")
 }

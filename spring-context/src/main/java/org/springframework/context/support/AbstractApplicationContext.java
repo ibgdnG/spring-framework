@@ -31,6 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.beans.factory.BeanFactory;
@@ -135,6 +137,8 @@ import org.springframework.util.ReflectionUtils;
  */
 public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		implements ConfigurableApplicationContext {
+
+	private static final Logger log = LoggerFactory.getLogger(AbstractApplicationContext.class);
 
 	/**
 	 * Name of the MessageSource bean in the factory.
@@ -543,43 +547,55 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		log.info("{} {} 来个锁，不然 refresh() 还没结束，你又来个启动或销毁容器的操作，那不就乱套了嘛", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		synchronized (this.startupShutdownMonitor) {
 			StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
 
 			// Prepare this context for refreshing.
+			log.info("{} {} [为容器初始化做准备] 准备工作，记录下容器的启动时间、标记“已启动”状态、处理配置文件中的占位符", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			log.info("{} {} [Focus] [解析 xml 和注解] 这步比较关键，这步完成后，配置文件就会解析成一个个 Bean 定义，注册到 BeanFactory 中，\n当然，这里说的 Bean 还没有初始化，只是配置信息都提取出来了，\n注册也只是将这些信息都保存到了注册中心(说到底核心是一个 beanName-> beanDefinition 的 map)", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			log.info("{} {} [给 BeanFactory 设置属性值以及添加一些处理器——准备 Spring 的上下文环境] 设置 BeanFactory 的类加载器，添加几个 BeanPostProcessor，手动注册几个特殊的 bean", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				log.info("{} {} [由子类实现对 BeanFactory 的一些后置处理]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				postProcessBeanFactory(beanFactory);
 
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 				// Invoke factory processors registered as beans in the context.
+				log.info("{} {} [完成对 BeanDefinitionRegistryPostProcessor 和 BeanFactoryPostProcessor 接口的调用]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
+				log.info("{} {} [把实现了 BeanPostProcessor 接口的类实例化，并且加入到 BeanFactory 中]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				registerBeanPostProcessors(beanFactory);
 				beanPostProcess.end();
 
 				// Initialize message source for this context.
+				log.info("{} {} [国际化]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				log.info("{} {} [初始化事件管理类]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				log.info("{} {} [这个方法着重理解模板设计模式，因为在 SpringBoot 中，这个方法用来做内嵌 Tomcat 启动]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				onRefresh();
 
 				// Check for listener beans and register them.
+				log.info("{} {} [往事件管理类中注册事件类]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				log.info("{} {} [1.bean 实例化过程；2.依赖注入；3.注解支持；4.BeanPostProcessor 的执行；5.Aop 的入口]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -617,6 +633,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void prepareRefresh() {
 		// Switch to active.
+		log.info("{} {} 记录启动时间，\n将 active 属性设置为 true，closed 属性设置为 false，它们都是 AtomicBoolean 类型", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		this.startupDate = System.currentTimeMillis();
 		this.closed.set(false);
 		this.active.set(true);
@@ -635,6 +652,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
+		log.info("{} {} 校验 xml 配置文件", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		getEnvironment().validateRequiredProperties();
 
 		// Store pre-refresh ApplicationListeners...
@@ -668,6 +686,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #getBeanFactory()
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+		log.info("{} 关闭旧的 BeanFactory (如果有)，创建新的 BeanFactory，加载 Bean 定义、注册 Bean 等等", Thread.currentThread().getStackTrace()[1].getMethodName());
 		refreshBeanFactory();
 		return getBeanFactory();
 	}

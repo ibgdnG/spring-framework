@@ -16,6 +16,8 @@
 
 package org.springframework.context.support;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ClassPathResource;
@@ -50,6 +52,8 @@ import org.springframework.util.Assert;
  * @see GenericApplicationContext
  */
 public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContext {
+
+	private static final Logger log = LoggerFactory.getLogger(ClassPathXmlApplicationContext.class);
 
 	@Nullable
 	private Resource[] configResources;
@@ -139,6 +143,7 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 			throws BeansException {
 
 		super(parent);
+		log.info("{} {} 根据提供的路径，处理成配置文件数组(以分号、逗号、空格、tab、换行符分割)", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		setConfigLocations(configLocations);
 		if (refresh) {
 			refresh();

@@ -245,7 +245,7 @@ public class TestContextManager {
 
 		for (TestExecutionListener testExecutionListener : getTestExecutionListeners()) {
 			try {
-				testExecutionListener.prepareTestInstance(getTestContext());
+//				testExecutionListener.prepareTestInstance(getTestContext());
 			}
 			catch (Throwable ex) {
 				if (logger.isErrorEnabled()) {

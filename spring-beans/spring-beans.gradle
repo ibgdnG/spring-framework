@@ -13,4 +13,5 @@ dependencies {
 	testImplementation("jakarta.annotation:jakarta.annotation-api")
 	testFixturesApi("org.junit.jupiter:junit-jupiter-api")
 	testFixturesImplementation("org.assertj:assertj-core")
+	implementation("org.slf4j:slf4j-api:1.7.35")
 }

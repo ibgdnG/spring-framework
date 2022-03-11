@@ -27,6 +27,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -83,6 +85,8 @@ import org.springframework.util.xml.DomUtils;
  * @see DefaultBeanDefinitionDocumentReader
  */
 public class BeanDefinitionParserDelegate {
+
+	private static final Logger log = LoggerFactory.getLogger(BeanDefinitionParserDelegate.class);
 
 	public static final String BEANS_NAMESPACE_URI = "http://www.springframework.org/schema/beans";
 
@@ -412,10 +416,49 @@ public class BeanDefinitionParserDelegate {
 	 */
 	@Nullable
 	public BeanDefinitionHolder parseBeanDefinitionElement(Element ele, @Nullable BeanDefinition containingBean) {
+		String format = """ 
+				先看下 <bean /> 标签中可以定义哪些属性：
+					Property					Description
+					class 						类的全限定名
+					name 						可指定 id、name(用逗号、分号、空格分隔)
+					scope 						作用域
+					constructor arguments 		指定构造参数
+					properties 					设置属性的值
+					autowiring mode 			no(默认值)、byName、byType、 constructor
+					lazy-initialization mode 	是否懒加载(如果被非懒加载的bean依赖了那么其实也就不能懒加载了)
+					initialization method 		bean 属性设置完成后，会调用这个方法
+					destruction method 			bean 销毁后的回调方法
+
+				上面表格中的内容我想大家都非常熟悉吧，如果不熟悉，那就是你不够了解 Spring 的配置了。
+
+				简单地说就是像下面这样子：
+
+					<bean id="exampleBean" name="name1, name2, name3" class="com.javadoop.ExampleBean"
+				   				scope="singleton" lazy-init="true" init-method="init" destroy-method="cleanup">
+
+				 				<!-- 可以用下面三种形式指定构造参数 -->
+				 				<constructor-arg type="int" value="7500000"/>
+				 				<constructor-arg name="years" value="7500000"/>
+				 				<constructor-arg index="0" value="7500000"/>
+
+				 				<!-- property 的几种情况 -->
+				 				<property name="beanOne">
+				     				<ref bean="anotherExampleBean"/>
+				 				</property>
+				 				<property name="beanTwo" ref="yetAnotherBean"/>
+				 				<property name="integerProperty" value="1"/>
+					</bean>
+
+				当然，除了上面举例出来的这些，还有 factory-bean、factory-method、<lockup-method />、<replaced-method />、<meta />、<qualifier /> 这几个。
+
+				有了以上这些知识以后，我们再继续往里看怎么解析 bean 元素，是怎么转换到 BeanDefinitionHolder 的。
+				""";
+		log.info("{} {} {}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), format);
 		String id = ele.getAttribute(ID_ATTRIBUTE);
 		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
 
 		List<String> aliases = new ArrayList<>();
+		log.info("{} {} 将 name 属性的定义按照 “逗号、分号、空格” 切分，形成一个 别名列表数组，如果不定义 name 属性，就是空", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		if (StringUtils.hasLength(nameAttr)) {
 			String[] nameArr = StringUtils.tokenizeToStringArray(nameAttr, MULTI_VALUE_ATTRIBUTE_DELIMITERS);
 			aliases.addAll(Arrays.asList(nameArr));
@@ -423,6 +466,7 @@ public class BeanDefinitionParserDelegate {
 
 		String beanName = id;
 		if (!StringUtils.hasText(beanName) && !aliases.isEmpty()) {
+			log.info("{} {} 如果没有指定id, 那么用别名列表的第一个名字作为 beanName", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			beanName = aliases.remove(0);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No XML 'id' specified - using '" + beanName +
@@ -434,9 +478,11 @@ public class BeanDefinitionParserDelegate {
 			checkNameUniqueness(beanName, aliases, ele);
 		}
 
+		log.info("{} {} 根据 <bean ...>...</bean> 中的配置创建 BeanDefinition，然后把配置中的信息都设置到实例中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		AbstractBeanDefinition beanDefinition = parseBeanDefinitionElement(ele, beanName, containingBean);
 		if (beanDefinition != null) {
 			if (!StringUtils.hasText(beanName)) {
+				log.info("{} 如果都没有设置 id 和 name，那么此时的 beanName 就会为 null", Thread.currentThread().getStackTrace()[1].getMethodName());
 				try {
 					if (containingBean != null) {
 						beanName = BeanDefinitionReaderUtils.generateBeanName(
@@ -451,6 +497,7 @@ public class BeanDefinitionParserDelegate {
 						if (beanClassName != null &&
 								beanName.startsWith(beanClassName) && beanName.length() > beanClassName.length() &&
 								!this.readerContext.getRegistry().isBeanNameInUse(beanClassName)) {
+							log.info("{} {} 把 beanClassName 设置为 Bean 的别名", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 							aliases.add(beanClassName);
 						}
 					}
@@ -512,17 +559,25 @@ public class BeanDefinitionParserDelegate {
 		}
 
 		try {
+			log.info("{} {} 创建 BeanDefinition，然后设置类信息", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			AbstractBeanDefinition bd = createBeanDefinition(className, parent);
 
+			log.info("{} {} 设置 BeanDefinition 的一堆属性，这些属性定义在 AbstractBeanDefinition 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
 			bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
 
+			log.info("{} {} 解析 <meta />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseMetaElements(ele, bd);
+			log.info("{} {} 解析 <lookup-method />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseLookupOverrideSubElements(ele, bd.getMethodOverrides());
+			log.info("{} {} 解析 <replaced-method />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseReplacedMethodSubElements(ele, bd.getMethodOverrides());
 
+			log.info("{} {} 解析 <constructor-arg />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseConstructorArgElements(ele, bd);
+			log.info("{} {} 解析 <property />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parsePropertyElements(ele, bd);
+			log.info("{} {} 解析 <qualifier />", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseQualifierElements(ele, bd);
 
 			bd.setResource(this.readerContext.getResource());
@@ -1378,6 +1433,7 @@ public class BeanDefinitionParserDelegate {
 	 */
 	@Nullable
 	public BeanDefinition parseCustomElement(Element ele, @Nullable BeanDefinition containingBd) {
+		log.info("{} 解析其他 namespace 的元素", Thread.currentThread().getStackTrace()[1].getMethodName());
 		String namespaceUri = getNamespaceURI(ele);
 		if (namespaceUri == null) {
 			return null;
