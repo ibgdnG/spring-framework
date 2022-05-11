@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.FatalBeanException;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
@@ -48,6 +50,8 @@ import org.springframework.util.CollectionUtils;
  * @see DefaultBeanDefinitionDocumentReader
  */
 public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver {
+
+	private static final Logger log = LoggerFactory.getLogger(DefaultNamespaceHandlerResolver.class);
 
 	/**
 	 * The location to look for the mapping files. Can be present in multiple JAR files.
@@ -115,7 +119,9 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 	@Override
 	@Nullable
 	public NamespaceHandler resolve(String namespaceUri) {
+		log.info("{} {} [获取 Spring 中所有 jar 包里面的“META-INF/spring.handlers”文件，并且建立映射关系]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		Map<String, Object> handlerMappings = getHandlerMappings();
+		log.info("{} {} [根据 NamespaceUri： http://www.springframework.org/schema/p，获取到命名空间的处理类]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		Object handlerOrClassName = handlerMappings.get(namespaceUri);
 		if (handlerOrClassName == null) {
 			return null;
@@ -132,6 +138,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 							"] does not implement the [" + NamespaceHandler.class.getName() + "] interface");
 				}
 				NamespaceHandler namespaceHandler = (NamespaceHandler) BeanUtils.instantiateClass(handlerClass);
+				log.info("{} {} [调用处理类的 init() 方法，在 init() 方法中完成标签元素解析类的注册]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				namespaceHandler.init();
 				handlerMappings.put(namespaceUri, namespaceHandler);
 				return namespaceHandler;

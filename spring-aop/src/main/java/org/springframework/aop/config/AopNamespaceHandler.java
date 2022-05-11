@@ -61,6 +61,9 @@ public class AopNamespaceHandler extends NamespaceHandlerSupport {
 	 */
 	@Override
 	public void init() {
+		/*
+			AOP 标签对应的 NamespaceHandler，可以发现 NamespaceHandler 的作用就是管理和注册与自己相关的标签解析器
+		*/
 		// In 2.0 XSD as well as in 2.5+ XSDs
 		registerBeanDefinitionParser("config", new ConfigBeanDefinitionParser());
 		registerBeanDefinitionParser("aspectj-autoproxy", new AspectJAutoProxyBeanDefinitionParser());

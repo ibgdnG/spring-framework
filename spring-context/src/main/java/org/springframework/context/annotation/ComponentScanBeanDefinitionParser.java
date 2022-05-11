@@ -20,6 +20,8 @@ import java.lang.annotation.Annotation;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -54,6 +56,8 @@ import org.springframework.util.StringUtils;
  */
 public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 
+	private static final Logger log = LoggerFactory.getLogger(ComponentScanBeanDefinitionParser.class);
+
 	private static final String BASE_PACKAGE_ATTRIBUTE = "base-package";
 
 	private static final String RESOURCE_PATTERN_ATTRIBUTE = "resource-pattern";
@@ -86,6 +90,7 @@ public class ComponentScanBeanDefinitionParser implements BeanDefinitionParser {
 				ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
 
 		// Actually scan for bean definitions and register them.
+		log.info("{} {} [创建 ClassPathBeanDefinitionScanner 对象，用来扫描 basePackage 包下符合条件的类（默认是@Component标注的类），并创建 BeanDefinition 类注册到缓存中]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		ClassPathBeanDefinitionScanner scanner = configureScanner(parserContext, element);
 		Set<BeanDefinitionHolder> beanDefinitions = scanner.doScan(basePackages);
 		registerComponents(parserContext.getReaderContext(), beanDefinitions, element);

@@ -918,12 +918,16 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		log.info("{} {} [xml 文件解析会把所有 beanName 都缓存到 beanDefinitionNames]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
+			log.info("{} {} [父 BeanDefinition 里的属性放到子 BeanDefinition 中]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			log.info("{} {} [如果不是抽象的、单例的、非懒加载的就实例化]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				log.info("{} {} [判断 bean 是否实现了 FactoryBean 接口]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean<?> factory) {

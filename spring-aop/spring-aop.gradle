@@ -9,4 +9,6 @@ dependencies {
 	testImplementation(testFixtures(project(":spring-core")))
 	testFixturesImplementation(testFixtures(project(":spring-beans")))
 	testFixturesImplementation(testFixtures(project(":spring-core")))
+	implementation 'org.slf4j:slf4j-api:1.7.33'
+	implementation 'org.slf4j:slf4j-simple:1.7.35'
 }

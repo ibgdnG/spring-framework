@@ -129,10 +129,11 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		// the new (child) delegate with a reference to the parent for fallback purposes,
 		// then ultimately reset this.delegate back to its original (parent) reference.
 		// this behavior emulates a stack of delegates without actually necessitating one.
-		log.info("{} {} 这里为什么要定义一个 parent? 看到后面就知道了，是递归问题，\n因为 <beans /> 内部是可以定义 <beans /> 的，所以这个方法的 root 其实不一定就是 xml 的根节点，也可以是嵌套在里面的 <beans /> 节点，从源码分析的角度，我们当做根节点就好了", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+		log.info("{} {} [创建 BeanDefinitionParserDelegate 对象] 这里为什么要定义一个 parent? 看到后面就知道了，是递归问题，\n因为 <beans /> 内部是可以定义 <beans /> 的，所以这个方法的 root 其实不一定就是 xml 的根节点，也可以是嵌套在里面的 <beans /> 节点，从源码分析的角度，我们当做根节点就好了", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
 
+		log.info("{} {} [如果是 Spring 原生命名空间，首先解析 profile 标签]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		if (this.delegate.isDefaultNamespace(root)) {
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
@@ -151,6 +152,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 
 		preProcessXml(root);
+		log.info("{} {} [focus 标签具体解析过程]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		parseBeanDefinitions(root, this.delegate);
 		postProcessXml(root);
 
@@ -171,15 +173,36 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * @param root the DOM root element of the document
 	 */
 	protected void parseBeanDefinitions(Element root, BeanDefinitionParserDelegate delegate) {
+		String str = """
+				Spring原生标签和自定义标签。怎么区分这两种标签呢？
+				 
+					// 自定义标签
+					<context:component-scan/>
+				 
+					// 默认标签
+					<bean:/>
+				 
+				如上，带前缀的就是自定义标签，否则就是 Spring 默认标签，无论哪种标签在使用前都需要在 Spring 的 xml 配置文件里声明 Namespace URI，这样在解析标签时才能通过 Namespace URI 找到对应的 NamespaceHandler。
+				 
+					xmlns:context="http://www.springframework.org/schema/context"
+				 
+					http://www.springframework.org/schema/beans
+					
+				
+				http://www.springframework.org/schema/beans 所对应的就是默认标签。
+				""";
+		log.info("{} {} {}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), str);
 		if (delegate.isDefaultNamespace(root)) {
 			NodeList nl = root.getChildNodes();
 			for (int i = 0; i < nl.getLength(); i++) {
 				Node node = nl.item(i);
 				if (node instanceof Element ele) {
 					if (delegate.isDefaultNamespace(ele)) {
+						log.info("{} {} [解析默认标签]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 						parseDefaultElement(ele, delegate);
 					}
 					else {
+						log.info("{} {} [解析自定义标签]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 						delegate.parseCustomElement(ele);
 					}
 				}
@@ -347,14 +370,14 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 * and registering it with the registry.
 	 */
 	protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
-		log.info("{} {} [Focus] 将 <bean /> 节点中的信息提取出来，然后封装到一个 BeanDefinitionHolder 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+		log.info("{} {} [Focus 解析 element 封装为 BeanDefinitionHolder 对象] 将 <bean /> 节点中的信息提取出来，然后封装到一个 BeanDefinitionHolder 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
 		if (bdHolder != null) {
-			log.info("{} {} 如果有自定义属性的话，进行相应的解析", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+			log.info("{} {} [涉及装饰者模式和 SPI 设计思想] 如果有自定义属性的话，进行相应的解析", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
 				// Register the final decorated instance.
-				log.info("{} {} [Focus] 注册最终解析的实例", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+				log.info("{} {} [Focus 完成 Document 转换为 BeanDefinition 对象，对转换后的对象进行缓存注册] 注册最终解析的实例", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
 			}
 			catch (BeanDefinitionStoreException ex) {

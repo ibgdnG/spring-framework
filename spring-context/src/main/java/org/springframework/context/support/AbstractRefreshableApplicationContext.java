@@ -124,15 +124,17 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
 		if (hasBeanFactory()) {
-			log.info("{} {} 如果 ApplicationContext 中已经加载过 BeanFactory 了，销毁所有 Bean，关闭 BeanFactory", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+			log.info("{} {} [如果 BeanFactory 不为空，将会清除 BeanFactory 和里面的实例] 如果 ApplicationContext 中已经加载过 BeanFactory 了，销毁所有 Bean，关闭 BeanFactory", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			destroyBeans();
 			closeBeanFactory();
 		}
 		try {
+			log.info("{} {} [创建 DefaultListableBeanFactory]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
 			beanFactory.setSerializationId(getId());
-			log.info("{} {} 设置 BeanFactory 的两个配置属性：是否允许 Bean 覆盖、是否允许循环引用", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+			log.info("{} {} [设置是否可以循环依赖 allowCircularReferences；是否允许使用相同名称重新注册不同的 bean 实现] 设置 BeanFactory 的两个配置属性：是否允许 Bean 覆盖、是否允许循环引用", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			customizeBeanFactory(beanFactory);
+			log.info("{} {} [解析 xml，并把 xml 中的标签封装成 BeanDefinition 对象]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			loadBeanDefinitions(beanFactory);
 			this.beanFactory = beanFactory;
 		}

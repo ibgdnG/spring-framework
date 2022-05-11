@@ -155,3 +155,8 @@ public class ContextLoadTest {
 　　BeanFactory工厂(是Spring架构早期的创建Bean对象的工厂接口)
 
 　　　　实现BeanFactory接口的工厂也可以获取到Bean对象
+
+## 源码解读
+
+### AbstractApplicationContext 的 refresh() 方法
+该方法是一个典型的模板方法模式的实现。

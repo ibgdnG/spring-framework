@@ -453,12 +453,12 @@ public class BeanDefinitionParserDelegate {
 
 				有了以上这些知识以后，我们再继续往里看怎么解析 bean 元素，是怎么转换到 BeanDefinitionHolder 的。
 				""";
-		log.info("{} {} {}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), format);
+		log.info("{} {} [获取 id 和 name 属性]\n{}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), format);
 		String id = ele.getAttribute(ID_ATTRIBUTE);
 		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
 
 		List<String> aliases = new ArrayList<>();
-		log.info("{} {} 将 name 属性的定义按照 “逗号、分号、空格” 切分，形成一个 别名列表数组，如果不定义 name 属性，就是空", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+		log.info("{} {} [获取别名属性，多个别名用“,;”隔开] 将 name 属性的定义按照 “逗号、分号、空格” 切分，形成一个 别名列表数组，如果不定义 name 属性，就是空", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		if (StringUtils.hasLength(nameAttr)) {
 			String[] nameArr = StringUtils.tokenizeToStringArray(nameAttr, MULTI_VALUE_ATTRIBUTE_DELIMITERS);
 			aliases.addAll(Arrays.asList(nameArr));
@@ -475,6 +475,7 @@ public class BeanDefinitionParserDelegate {
 		}
 
 		if (containingBean == null) {
+			log.info("{} {} [检查 beanName 是否重复]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			checkNameUniqueness(beanName, aliases, ele);
 		}
 
@@ -549,6 +550,7 @@ public class BeanDefinitionParserDelegate {
 
 		this.parseState.push(new BeanEntry(beanName));
 
+		log.info("{} {} [获取 class 名称及父类名称]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		String className = null;
 		if (ele.hasAttribute(CLASS_ATTRIBUTE)) {
 			className = ele.getAttribute(CLASS_ATTRIBUTE).trim();
@@ -562,7 +564,7 @@ public class BeanDefinitionParserDelegate {
 			log.info("{} {} 创建 BeanDefinition，然后设置类信息", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			AbstractBeanDefinition bd = createBeanDefinition(className, parent);
 
-			log.info("{} {} 设置 BeanDefinition 的一堆属性，这些属性定义在 AbstractBeanDefinition 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
+			log.info("{} {} [解析 bean 标签的属性，把解析出的属性设置到 BeanDefinition 对象中] 设置 BeanDefinition 的一堆属性，这些属性定义在 AbstractBeanDefinition 中", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
 			bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
 
@@ -1469,13 +1471,19 @@ public class BeanDefinitionParserDelegate {
 		BeanDefinitionHolder finalDefinition = originalDef;
 
 		// Decorate based on custom attributes first.
+		log.info("{} {} [根据 bean 标签属性装饰 BeanDefinitionHolder，比如 <bean class=\"xxx\" p:user=\"dark\"/>]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		NamedNodeMap attributes = ele.getAttributes();
 		for (int i = 0; i < attributes.getLength(); i++) {
 			Node node = attributes.item(i);
 			finalDefinition = decorateIfRequired(node, finalDefinition, containingBd);
 		}
 
+		String str = """
+					// c:和p:表示通过构造器和属性的setter方法给属性赋值，是constructor-arg和property的简化写法
+					<bean class="com.dark.bean.Student" id="student" p:username="Dark" p:password="111" c:age="12" c:sex="1"/>
+				""";
 		// Decorate based on custom nested elements.
+		log.info("{} {} [根据 bean 标签子元素装饰 BeanDefinitionHolder]\n{}", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber(), str);
 		NodeList children = ele.getChildNodes();
 		for (int i = 0; i < children.getLength(); i++) {
 			Node node = children.item(i);
@@ -1497,10 +1505,13 @@ public class BeanDefinitionParserDelegate {
 	public BeanDefinitionHolder decorateIfRequired(
 			Node node, BeanDefinitionHolder originalDef, @Nullable BeanDefinition containingBd) {
 
+		log.info("{} {} [根据 node 获取到 node 的命名空间，形如： http://www.springframework.org/schema/p]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 		String namespaceUri = getNamespaceURI(node);
 		if (namespaceUri != null && !isDefaultNamespace(namespaceUri)) {
+			log.info("{} {} [根据配置文件获取 namespaceUri 对应的处理类]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 			NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
 			if (handler != null) {
+				log.info("{} {} [调用 NamespaceHandler 处理类的 decorate 方法]", Thread.currentThread().getStackTrace()[1].getMethodName(), Thread.currentThread().getStackTrace()[1].getLineNumber());
 				BeanDefinitionHolder decorated =
 						handler.decorate(node, originalDef, new ParserContext(this.readerContext, this, containingBd));
 				if (decorated != null) {
